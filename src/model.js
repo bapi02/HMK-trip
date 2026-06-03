@@ -39,6 +39,29 @@ export function addDays(dateStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
+// 출발일~도착일 사이 일수(당일 포함). 둘 다 있어야 계산.
+export function daysBetween(startDate, endDate) {
+  if (!startDate || !endDate) return null;
+  const a = new Date(startDate + "T00:00:00");
+  const b = new Date(endDate + "T00:00:00");
+  const diff = Math.round((b - a) / 86400000) + 1;
+  return diff >= 1 ? diff : 1;
+}
+
+// 빈 항공편 한 개. depart/arrive는 datetime-local 문자열 "YYYY-MM-DDTHH:mm".
+export function newFlight(partial = {}) {
+  return {
+    airline: "",
+    flightNo: "",
+    from: "", // 출발 공항 코드 예: ICN
+    to: "", // 도착 공항 코드 예: NRT
+    depart: "", // 출발 일시
+    arrive: "", // 도착 일시
+    cost: null,
+    ...partial,
+  };
+}
+
 // 빈 스팟 한 개.
 export function newSpot(partial = {}) {
   return {
@@ -58,10 +81,15 @@ export function newSpot(partial = {}) {
   };
 }
 
-// 새 여행 껍데기. startDate/days 기준으로 빈 Day 배열 생성.
+// 새 여행 껍데기. 출발일~도착일(또는 days)로 빈 Day 배열 생성.
 export function newTrip(partial = {}) {
   const startDate = partial.startDate || "";
-  const days = partial.days || 1;
+  // days 결정: 출발/도착일이 둘 다 있으면 그 사이 일수, 아니면 days(기본 1).
+  const days =
+    daysBetween(startDate, partial.endDate) || partial.days || 1;
+  // endDate 결정: 명시값 우선, 없으면 startDate + (days-1).
+  const endDate =
+    partial.endDate || (startDate ? addDays(startDate, days - 1) : "");
   const schedule =
     partial.schedule ||
     Array.from({ length: days }, (_, i) => ({
@@ -74,8 +102,13 @@ export function newTrip(partial = {}) {
     title: partial.title || "새 여행",
     destination: partial.destination || "",
     startDate,
+    endDate,
     days,
     cover: partial.cover || "",
+    flights: partial.flights || {
+      outbound: newFlight(), // 가는 편
+      inbound: newFlight(), // 오는 편(귀국)
+    },
     createdAt: partial.createdAt || nowISO(),
     updatedAt: nowISO(),
     schedule,
@@ -88,8 +121,15 @@ export function cloneTrip(trip) {
   copy.id = uid("trip");
   copy.title = `${trip.title} (복사본)`;
   copy.startDate = "";
+  copy.endDate = "";
   copy.createdAt = nowISO();
   copy.updatedAt = nowISO();
+  // 항공편 정보는 유지하되 날짜·시간만 비운다(스펙: 날짜만 비우기).
+  if (copy.flights) {
+    for (const k of Object.keys(copy.flights)) {
+      copy.flights[k] = { ...copy.flights[k], depart: "", arrive: "" };
+    }
+  }
   copy.schedule = copy.schedule.map((day, i) => ({
     ...day,
     date: "",
@@ -99,13 +139,23 @@ export function cloneTrip(trip) {
   return copy;
 }
 
-// 여행 전체 예상 비용 합계.
+// 항공권 비용 합계(가는 편 + 오는 편).
+export function flightCost(trip) {
+  if (!trip.flights) return 0;
+  return Object.values(trip.flights).reduce(
+    (s, f) => s + (Number(f && f.cost) || 0),
+    0
+  );
+}
+
+// 여행 전체 예상 비용 합계(스팟 + 항공권).
 export function totalCost(trip) {
-  return trip.schedule.reduce(
+  const spots = trip.schedule.reduce(
     (sum, day) =>
       sum + day.spots.reduce((s, sp) => s + (Number(sp.cost) || 0), 0),
     0
   );
+  return spots + flightCost(trip);
 }
 
 // 여행 전체 이동시간 합계(분).
@@ -130,6 +180,23 @@ export function formatCost(n) {
   return "¥" + Number(n).toLocaleString("ja-JP");
 }
 
+// "2026-07-10T09:30" → "7.10(목) 09:30" (한국어 요일)
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+export function formatDateTime(dt) {
+  if (!dt) return "";
+  const d = new Date(dt);
+  if (isNaN(d)) return dt;
+  const w = WEEKDAYS[d.getDay()];
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getMonth() + 1}.${d.getDate()}(${w}) ${hh}:${mm}`;
+}
+
+// 항공편에 입력된 내용이 하나라도 있는지.
+export function hasFlightInfo(f) {
+  return Boolean(f && (f.airline || f.flightNo || f.from || f.to || f.depart || f.arrive));
+}
+
 // 첫 데이터로 "도쿄 3박 4일" 샘플 trip — 빈 화면 방지.
 export function seedTrip() {
   const start = "2026-07-10";
@@ -138,9 +205,30 @@ export function seedTrip() {
     title: "도쿄 3박 4일",
     destination: "Tokyo, Japan",
     startDate: start,
+    endDate: addDays(start, 3),
     days: 4,
     cover:
       "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=900&q=70",
+    flights: {
+      outbound: newFlight({
+        airline: "대한항공",
+        flightNo: "KE703",
+        from: "ICN",
+        to: "NRT",
+        depart: `${start}T09:00`,
+        arrive: `${start}T11:30`,
+        cost: 220000,
+      }),
+      inbound: newFlight({
+        airline: "대한항공",
+        flightNo: "KE706",
+        from: "NRT",
+        to: "ICN",
+        depart: `${addDays(start, 3)}T18:00`,
+        arrive: `${addDays(start, 3)}T20:50`,
+        cost: 0,
+      }),
+    },
     createdAt: nowISO(),
     updatedAt: nowISO(),
     schedule: [

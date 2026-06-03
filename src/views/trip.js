@@ -6,6 +6,10 @@ import {
   totalMoveMin,
   formatCost,
   addDays,
+  daysBetween,
+  newFlight,
+  hasFlightInfo,
+  formatDateTime,
 } from "../model.js";
 import { formatMin } from "../geo.js";
 import { renderTimeline } from "./timeline.js";
@@ -85,9 +89,7 @@ export async function renderTrip(root, store, tripId) {
         el("h1", {}, [trip.title]),
         el("div.sub", {}, [
           el("span", {}, [trip.destination || "목적지 미정"]),
-          el("span", {}, [
-            trip.startDate ? `${trip.startDate} 시작` : "날짜 미정",
-          ]),
+          el("span", {}, [tripDateRange(trip)]),
           el("span", {}, [`${trip.days}일`]),
           el(
             "button.btn.sm.ghost",
@@ -97,6 +99,10 @@ export async function renderTrip(root, store, tripId) {
         ]),
       ])
     );
+
+    // 항공권 요약 (입력된 편만 표시)
+    const flightCards = renderFlightSummary(trip);
+    if (flightCards) root.appendChild(flightCards);
 
     // 합계 바 (여행 전체)
     root.appendChild(
@@ -142,6 +148,121 @@ export async function renderTrip(root, store, tripId) {
 
   function stat(k, v) {
     return el("div.stat", {}, [el("div.k", {}, [k]), el("div.v", {}, [v])]);
+  }
+
+  // 출발일 ~ 도착일 문자열.
+  function tripDateRange(trip) {
+    if (!trip.startDate) return "날짜 미정";
+    if (!trip.endDate || trip.endDate === trip.startDate) return trip.startDate;
+    return `${trip.startDate} ~ ${trip.endDate}`;
+  }
+
+  // 항공권 요약 카드 — 가는 편/오는 편 중 입력된 것만.
+  function renderFlightSummary(trip) {
+    if (!trip.flights) return null;
+    const rows = [];
+    const labels = { outbound: "가는 편", inbound: "오는 편" };
+    for (const key of ["outbound", "inbound"]) {
+      const f = trip.flights[key];
+      if (hasFlightInfo(f)) rows.push(flightRow(labels[key], f));
+    }
+    if (!rows.length) return null;
+    return el("div.flights", {}, rows);
+  }
+
+  function flightRow(label, f) {
+    const route =
+      f.from || f.to ? `${f.from || "?"} → ${f.to || "?"}` : "";
+    const carrier = [f.airline, f.flightNo].filter(Boolean).join(" ");
+    const times = [formatDateTime(f.depart), formatDateTime(f.arrive)]
+      .filter(Boolean)
+      .join(" → ");
+    return el("div.flight-row", {}, [
+      el("span.fl-icon", {}, ["✈"]),
+      el("span.fl-label", {}, [label]),
+      el("div.fl-main", {}, [
+        el("div.fl-route", {}, [route || carrier || "항공편"]),
+        times ? el("div.fl-times", {}, [times]) : null,
+      ]),
+      el("div.fl-right", {}, [
+        carrier && route ? el("div.fl-carrier", {}, [carrier]) : null,
+        f.cost ? el("div.fl-cost", {}, [formatCost(f.cost)]) : null,
+      ]),
+    ]);
+  }
+
+  // 설정 모달용 항공편 입력 묶음 (draft.flights[*]를 직접 수정).
+  function flightEditor(title, f) {
+    return el("fieldset.flight-edit", {}, [
+      el("legend", {}, [title]),
+      el("div.field-row", {}, [
+        el("div.field", {}, [
+          el("label", {}, ["출발 공항"]),
+          el("input", {
+            type: "text",
+            placeholder: "ICN",
+            value: f.from || "",
+            oninput: (e) => (f.from = e.target.value.toUpperCase()),
+          }),
+        ]),
+        el("div.field", {}, [
+          el("label", {}, ["도착 공항"]),
+          el("input", {
+            type: "text",
+            placeholder: "NRT",
+            value: f.to || "",
+            oninput: (e) => (f.to = e.target.value.toUpperCase()),
+          }),
+        ]),
+      ]),
+      el("div.field-row", {}, [
+        el("div.field", {}, [
+          el("label", {}, ["항공사"]),
+          el("input", {
+            type: "text",
+            placeholder: "대한항공",
+            value: f.airline || "",
+            oninput: (e) => (f.airline = e.target.value),
+          }),
+        ]),
+        el("div.field", {}, [
+          el("label", {}, ["편명"]),
+          el("input", {
+            type: "text",
+            placeholder: "KE703",
+            value: f.flightNo || "",
+            oninput: (e) => (f.flightNo = e.target.value.toUpperCase()),
+          }),
+        ]),
+      ]),
+      el("div.field", {}, [
+        el("label", {}, ["출발 일시"]),
+        el("input", {
+          type: "datetime-local",
+          value: f.depart || "",
+          oninput: (e) => (f.depart = e.target.value),
+        }),
+      ]),
+      el("div.field", {}, [
+        el("label", {}, ["도착 일시"]),
+        el("input", {
+          type: "datetime-local",
+          value: f.arrive || "",
+          oninput: (e) => (f.arrive = e.target.value),
+        }),
+      ]),
+      el("div.field", {}, [
+        el("label", {}, ["항공권 비용 (¥)"]),
+        el("input", {
+          type: "number",
+          min: "0",
+          placeholder: "0",
+          value: f.cost ?? "",
+          oninput: (e) =>
+            (f.cost = e.target.value === "" ? null : Number(e.target.value)),
+        }),
+      ]),
+    ]);
   }
 
   // Day 탭 — 선택 + 다른 날로 스팟 드롭 타깃.
@@ -211,8 +332,13 @@ export async function renderTrip(root, store, tripId) {
       title: trip.title,
       destination: trip.destination,
       startDate: trip.startDate,
-      days: trip.days,
+      endDate: trip.endDate || "",
       cover: trip.cover,
+      // 항공편은 깊은 복사로 편집(취소 시 원본 유지).
+      flights: {
+        outbound: { ...newFlight(), ...(trip.flights?.outbound || {}) },
+        inbound: { ...newFlight(), ...(trip.flights?.inbound || {}) },
+      },
     };
     const backdrop = el("div.modal-backdrop");
     const close = () => {
@@ -240,7 +366,7 @@ export async function renderTrip(root, store, tripId) {
         ]),
         el("div.field-row", {}, [
           el("div.field", {}, [
-            el("label", {}, ["시작일"]),
+            el("label", {}, ["출발일"]),
             el("input", {
               type: "date",
               value: draft.startDate || "",
@@ -248,14 +374,11 @@ export async function renderTrip(root, store, tripId) {
             }),
           ]),
           el("div.field", {}, [
-            el("label", {}, ["기간 (일)"]),
+            el("label", {}, ["도착일 (귀국)"]),
             el("input", {
-              type: "number",
-              min: "1",
-              max: "30",
-              value: String(draft.days),
-              oninput: (e) =>
-                (draft.days = Math.max(1, Number(e.target.value) || 1)),
+              type: "date",
+              value: draft.endDate || "",
+              oninput: (e) => (draft.endDate = e.target.value),
             }),
           ]),
         ]),
@@ -267,6 +390,8 @@ export async function renderTrip(root, store, tripId) {
             oninput: (e) => (draft.cover = e.target.value),
           }),
         ]),
+        flightEditor("✈ 가는 편", draft.flights.outbound),
+        flightEditor("✈ 오는 편 (귀국)", draft.flights.inbound),
       ]),
       el("footer", {}, [
         el(
@@ -308,11 +433,14 @@ export async function renderTrip(root, store, tripId) {
     trip.title = draft.title.trim() || "새 여행";
     trip.destination = draft.destination.trim();
     trip.cover = draft.cover.trim();
+    trip.flights = draft.flights;
     const oldStart = trip.startDate;
     trip.startDate = draft.startDate;
+    trip.endDate = draft.endDate;
 
-    // 기간 변경: 늘면 빈 Day 추가, 줄면 뒤 Day 제거(스팟 있으면 확인).
-    const newDays = draft.days;
+    // 기간 = 출발일~도착일 일수. 날짜 미정이면 기존 schedule 길이 유지.
+    const newDays =
+      daysBetween(draft.startDate, draft.endDate) || trip.schedule.length;
     if (newDays > trip.schedule.length) {
       for (let i = trip.schedule.length; i < newDays; i++) {
         trip.schedule.push({
@@ -333,6 +461,11 @@ export async function renderTrip(root, store, tripId) {
       trip.schedule = trip.schedule.slice(0, newDays);
     }
     trip.days = newDays;
+
+    // 도착일이 비어 있으면 출발일+기간으로 보정.
+    if (trip.startDate && !trip.endDate) {
+      trip.endDate = addDays(trip.startDate, newDays - 1);
+    }
 
     // 시작일 바뀌면 각 Day 날짜 재계산 (라벨은 유지).
     if (trip.startDate && trip.startDate !== oldStart) {

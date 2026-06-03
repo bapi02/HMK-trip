@@ -80,7 +80,7 @@ function tripCard(trip, { onClone, onDelete }) {
 
 // 새 여행 만들기 모달.
 function openNewTripModal(onCreate) {
-  const draft = { title: "", destination: "", startDate: "", days: 3, cover: "" };
+  const draft = { title: "", destination: "", startDate: "", endDate: "", cover: "" };
   const backdrop = el("div.modal-backdrop");
   const close = () => {
     backdrop.classList.remove("open");
@@ -108,20 +108,17 @@ function openNewTripModal(onCreate) {
       ]),
       el("div.field-row", {}, [
         el("div.field", {}, [
-          el("label", {}, ["시작일 (선택)"]),
+          el("label", {}, ["출발일"]),
           el("input", {
             type: "date",
             oninput: (e) => (draft.startDate = e.target.value),
           }),
         ]),
         el("div.field", {}, [
-          el("label", {}, ["기간 (일)"]),
+          el("label", {}, ["도착일(귀국)"]),
           el("input", {
-            type: "number",
-            min: "1",
-            max: "30",
-            value: "3",
-            oninput: (e) => (draft.days = Math.max(1, Number(e.target.value) || 1)),
+            type: "date",
+            oninput: (e) => (draft.endDate = e.target.value),
           }),
         ]),
       ]),
@@ -145,7 +142,7 @@ function openNewTripModal(onCreate) {
               title: draft.title.trim() || "새 여행",
               destination: draft.destination.trim(),
               startDate: draft.startDate,
-              days: draft.days,
+              endDate: draft.endDate,
               cover: draft.cover.trim(),
             });
             close();

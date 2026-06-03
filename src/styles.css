@@ -180,6 +180,37 @@ button { font-family: var(--font-body); cursor: pointer; }
 .stat .k { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; }
 .stat .v { font-size: 17px; font-weight: 700; font-family: var(--font-display); }
 
+/* ── 항공권 요약 ────────────────────────────── */
+.flights { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 2px; }
+.flight-row {
+  display: flex; align-items: center; gap: 11px;
+  background: var(--card); border: 1px solid var(--line);
+  border-left: 4px solid var(--c-transport); border-radius: var(--radius-sm);
+  padding: 10px 13px; box-shadow: var(--shadow-sm);
+}
+.flight-row .fl-icon { font-size: 17px; color: var(--c-transport); }
+.flight-row .fl-label {
+  font-size: 11px; font-weight: 700; color: var(--c-transport);
+  background: color-mix(in srgb, var(--c-transport) 12%, transparent);
+  padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.flight-row .fl-main { flex: 1; min-width: 0; }
+.flight-row .fl-route { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.flight-row .fl-times { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+.flight-row .fl-right { text-align: right; }
+.flight-row .fl-carrier { font-size: 12.5px; color: var(--ink-soft); }
+.flight-row .fl-cost { font-size: 13px; font-weight: 700; color: var(--accent-deep); }
+
+/* 설정 모달 — 항공편 입력 묶음 */
+.flight-edit {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 10px 12px 2px; margin: 6px 0 14px; background: var(--paper);
+}
+.flight-edit legend {
+  font-size: 12.5px; font-weight: 700; color: var(--c-transport);
+  padding: 0 6px;
+}
+
 /* ── 뷰 토글 + Day 탭 ───────────────────────── */
 .toolbar { display: flex; align-items: center; gap: 10px; margin: 16px 0 14px; flex-wrap: wrap; }
 .toggle {
@@ -282,6 +313,14 @@ button { font-family: var(--font-body); cursor: pointer; }
   border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
 }
 .pin span { transform: rotate(45deg); }
+/* 핀 옆 한국어 장소명 라벨 */
+.leaflet-tooltip.pin-label {
+  font-family: var(--font-body); font-weight: 600; font-size: 12px;
+  color: var(--ink); background: color-mix(in srgb, var(--card) 92%, transparent);
+  border: 1px solid var(--line-strong); border-radius: 6px;
+  padding: 2px 7px; box-shadow: var(--shadow-sm); white-space: nowrap;
+}
+.leaflet-tooltip.pin-label::before { display: none; } /* 꼬리 제거 */
 .leaflet-popup-content { font-family: var(--font-body); }
 .leaflet-popup-content .pp-title { font-weight: 700; font-size: 14px; }
 .leaflet-popup-content .pp-meta { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
