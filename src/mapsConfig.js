@@ -5,7 +5,7 @@
 // 키 발급: Google Cloud Console(= Firebase 프로젝트) → "Maps JavaScript API" 사용 설정
 //          → 사용자 인증 정보 → API 키. (HTTP 리퍼러 제한 권장)
 
-export const googleMapsApiKey = "";
+export const googleMapsApiKey = "AIzaSyD_jInCRxSrNy0ykBsTAjM1bJnCKbRAw_k";
 
 export function hasGoogleMaps() {
   return Boolean(googleMapsApiKey);
