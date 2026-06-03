@@ -5,12 +5,12 @@
 // 모든 값이 비어 있으면 store.js가 자동으로 localStorage 어댑터를 선택한다.
 
 export const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
+  apiKey: "AIzaSyClVYZGlsFRZY12ZZIX_aP-DWDNDPzMvGc",
+  authDomain: "hmk-trip.firebaseapp.com",
+  projectId: "hmk-trip",
+  storageBucket: "hmk-trip.firebasestorage.app",
+  messagingSenderId: "114364444156",
+  appId: "1:114364444156:web:9a265c5099d4c6248dd679",
 };
 
 // config가 의미 있게 채워졌는지 판단 (projectId + apiKey 기준).

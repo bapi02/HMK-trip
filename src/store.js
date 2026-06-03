@@ -147,6 +147,22 @@ async function createFirestoreStore() {
   };
 }
 
+// Firestore가 완전히 비어 있고 이 브라우저에서 아직 시드한 적 없으면
+// "도쿄 3박 4일" 샘플을 1회 주입(빈 화면 방지, 동기화 확인 편의). 이후 지워도 다시 안 생김.
+const FB_SEEDED = "tripPlanner.fbSeeded.v1";
+async function ensureFirestoreSeed(storeApi) {
+  try {
+    if (localStorage.getItem(FB_SEEDED)) return;
+    const trips = await storeApi.listTrips();
+    if (trips.length === 0) {
+      await storeApi.saveTrip(seedTrip());
+    }
+    localStorage.setItem(FB_SEEDED, "1");
+  } catch (e) {
+    console.warn("Firestore 시드 건너뜀", e);
+  }
+}
+
 // ─────────────────────────────────────────────
 // 자동 선택 + 싱글톤
 // ─────────────────────────────────────────────
@@ -157,7 +173,9 @@ export function getStore() {
   _storePromise = (async () => {
     if (hasFirebaseConfig()) {
       try {
-        return await createFirestoreStore();
+        const fb = await createFirestoreStore();
+        await ensureFirestoreSeed(fb);
+        return fb;
       } catch (e) {
         console.warn("Firestore 초기화 실패 — local 모드로 폴백", e);
         return createLocalStore();
