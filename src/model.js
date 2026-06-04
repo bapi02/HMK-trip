@@ -77,6 +77,7 @@ export function newSpot(partial = {}) {
     moveMin: null,
     links: [],
     photos: [],
+    placeId: null, // 구글 장소 ID (리뷰·사진 재조회용)
     ...partial,
   };
 }

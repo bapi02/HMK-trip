@@ -146,7 +146,7 @@ button { font-family: var(--font-body); cursor: pointer; }
   font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 999px;
 }
 .trip-card .body { padding: 13px 14px 14px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.trip-card .body h3 { font-size: 18px; margin: 0; line-height: 1.25; }
+.trip-card .body h3 { font-family: var(--font-body); font-weight: 700; font-size: 18px; margin: 0; line-height: 1.25; }
 .trip-card .meta { font-size: 12.5px; color: var(--ink-soft); display: flex; gap: 6px; flex-wrap: wrap; }
 .trip-card .meta .dot { color: var(--line-strong); }
 .trip-card .actions {
@@ -162,7 +162,8 @@ button { font-family: var(--font-body); cursor: pointer; }
   transition: background .15s ease, border-color .15s ease;
 }
 .new-card:hover { background: var(--card); border-color: var(--accent); color: var(--accent-deep); }
-.new-card .plus { font-size: 30px; font-family: var(--font-display); }
+.new-card { font-family: var(--font-body); font-weight: 600; }
+.new-card .plus { font-size: 30px; font-family: var(--font-body); font-weight: 400; }
 
 /* ── 상세 헤더 ──────────────────────────────── */
 .trip-head { margin-bottom: 14px; }
@@ -353,6 +354,40 @@ button { font-family: var(--font-body); cursor: pointer; }
 .leaflet-popup-content { font-family: var(--font-body); }
 .leaflet-popup-content .pp-title { font-weight: 700; font-size: 14px; }
 .leaflet-popup-content .pp-meta { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+.pp-title { font-weight: 700; font-size: 14px; }
+.pp-meta { color: var(--ink-soft); font-size: 12px; margin-top: 2px; }
+.pp-btn {
+  margin-top: 6px; border: 1px solid var(--line-strong); background: var(--card);
+  color: var(--ink); border-radius: 7px; padding: 5px 9px; font-size: 12.5px;
+  font-weight: 600; font-family: var(--font-body); cursor: pointer;
+}
+.pp-btn:hover { background: var(--accent-wash); border-color: var(--accent); }
+
+/* ── 장소 상세 시트 (구글 리뷰·사진) ─────────── */
+.place-sheet .ps-rating { font-size: 16px; color: var(--accent-deep); font-weight: 700; }
+.place-sheet .ps-rating .ps-count { font-size: 13px; color: var(--ink-soft); font-weight: 500; }
+.place-sheet .ps-addr { font-size: 13px; color: var(--ink-soft); margin: 6px 0 12px; }
+.ps-photos {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+}
+.ps-photos img {
+  height: 168px; border-radius: 10px; border: 1px solid var(--line);
+  scroll-snap-align: start; flex: 0 0 auto;
+}
+.ps-hours { font-size: 13px; margin-bottom: 12px; color: var(--ink-soft); }
+.ps-hours summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.ps-hours div div { padding: 1px 0; }
+.ps-section { font-family: var(--font-display); font-weight: 700; font-size: 15px; margin: 6px 0 8px; }
+.ps-review { border-top: 1px solid var(--line); padding: 11px 0; }
+.ps-rv-head { display: flex; gap: 9px; align-items: center; }
+.ps-rv-ava { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.ps-rv-ava.ph { background: var(--paper-2); display: grid; place-items: center; font-weight: 700; color: var(--ink-soft); }
+.ps-rv-author { font-weight: 600; font-size: 13.5px; }
+.ps-rv-meta { font-size: 12px; color: var(--ink-faint); }
+.ps-rv-text { font-size: 13.5px; color: var(--ink-soft); margin-top: 6px; line-height: 1.55; white-space: pre-wrap; }
+.ps-attrib { font-size: 11.5px; color: var(--ink-faint); margin-top: 12px; }
+.ps-empty { color: var(--ink-faint); padding: 16px 0; text-align: center; }
 
 /* ── 사이드 시트 / 모달 (스팟 편집) ──────────── */
 .sheet-backdrop {

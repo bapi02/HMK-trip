@@ -5,6 +5,21 @@ import { el, clear, toast } from "../util.js";
 import { CATEGORIES, formatCost, newSpot } from "../model.js";
 import { centroid } from "../geo.js";
 import { hasGoogleMaps, loadGoogleMaps } from "../mapsConfig.js";
+import { openPlaceSheet } from "../components/placeSheet.js";
+
+// Place Details에서 가져올 필드 (리뷰·사진 포함)
+const DETAIL_FIELDS = [
+  "place_id",
+  "name",
+  "geometry",
+  "rating",
+  "user_ratings_total",
+  "reviews",
+  "photos",
+  "formatted_address",
+  "opening_hours",
+  "url",
+];
 
 let _map = null; // Leaflet 인스턴스
 let _gmap = null; // 구글맵 인스턴스
@@ -71,6 +86,47 @@ function renderGoogleMap(container, ctx) {
       const info = new google.maps.InfoWindow();
       const bounds = new google.maps.LatLngBounds();
       const path = [];
+      const service = new google.maps.places.PlacesService(_gmap);
+
+      // 장소를 현재 Day 일정에 추가 (장소ID·좌표·구글링크 포함).
+      async function addSpotFromPlace(place, coord) {
+        day.spots.push(
+          newSpot({
+            title: place.name || "새 장소",
+            lat: Number(coord.lat.toFixed(6)),
+            lng: Number(coord.lng.toFixed(6)),
+            memo: place.rating ? `구글 평점 ${place.rating.toFixed(1)} / 5` : "",
+            links: place.url ? [place.url] : [],
+            placeId: place.place_id || null,
+          })
+        );
+        await ctx.persist();
+        toast(`"${place.name}" 일정에 추가됨`);
+        ctx.refresh();
+      }
+
+      // 장소 상세(리뷰·사진)를 받아 인앱 시트로 표시.
+      function openDetails(placeId, coord) {
+        if (!placeId) {
+          toast("이 장소는 구글 상세 정보가 없어요");
+          return;
+        }
+        service.getDetails({ placeId, fields: DETAIL_FIELDS }, (d, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && d) {
+            openPlaceSheet(d, {
+              onAdd: (detail) => {
+                const loc = detail.geometry?.location;
+                addSpotFromPlace(detail, {
+                  lat: loc ? loc.lat() : coord.lat,
+                  lng: loc ? loc.lng() : coord.lng,
+                });
+              },
+            });
+          } else {
+            toast("상세 정보를 불러오지 못했어요");
+          }
+        });
+      }
 
       located.forEach((spot) => {
         const order = day.spots.indexOf(spot) + 1;
@@ -89,11 +145,23 @@ function renderGoogleMap(container, ctx) {
               (spot.time ? ` · ${spot.time}` : "") +
               (spot.cost ? ` · ${formatCost(spot.cost)}` : "") +
               `</div>` +
-              (spot.links && spot.links[0]
+              (spot.placeId
+                ? `<button class="pp-btn" data-review="1">📸 리뷰·사진 보기</button>`
+                : spot.links && spot.links[0]
                 ? `<div style="margin-top:4px"><a href="${spot.links[0]}" target="_blank" rel="noopener">구글에서 보기 ↗</a></div>`
                 : "")
           );
           info.open(_gmap, marker);
+          // InfoWindow 버튼은 DOM 렌더 후 핸들러 연결.
+          if (spot.placeId) {
+            google.maps.event.addListenerOnce(info, "domready", () => {
+              document
+                .querySelector('.pp-btn[data-review="1"]')
+                ?.addEventListener("click", () =>
+                  openDetails(spot.placeId, { lat: spot.lat, lng: spot.lng })
+                );
+            });
+          }
         });
         marker.addListener("dragend", async () => {
           const p = marker.getPosition();
@@ -121,6 +189,7 @@ function renderGoogleMap(container, ctx) {
       // ── 장소 검색 (Places Autocomplete)
       const ac = new google.maps.places.Autocomplete(searchInput, {
         fields: [
+          "place_id",
           "name",
           "geometry",
           "rating",
@@ -167,33 +236,14 @@ function renderGoogleMap(container, ctx) {
                 : null,
             ]),
             el("div.sr-actions", {}, [
-              place.url
-                ? el(
-                    "a.btn.sm.ghost",
-                    { href: place.url, target: "_blank", rel: "noopener" },
-                    ["리뷰 보기 ↗"]
-                  )
-                : null,
+              el(
+                "button.btn.sm.ghost",
+                { onclick: () => openDetails(place.place_id, coord) },
+                ["📸 리뷰·사진"]
+              ),
               el(
                 "button.btn.sm.primary",
-                {
-                  onclick: async () => {
-                    day.spots.push(
-                      newSpot({
-                        title: place.name || "새 장소",
-                        lat: Number(coord.lat.toFixed(6)),
-                        lng: Number(coord.lng.toFixed(6)),
-                        memo: place.rating
-                          ? `구글 평점 ${place.rating.toFixed(1)} / 5`
-                          : "",
-                        links: place.url ? [place.url] : [],
-                      })
-                    );
-                    await ctx.persist();
-                    toast(`"${place.name}" 일정에 추가됨`);
-                    ctx.refresh();
-                  },
-                },
+                { onclick: () => addSpotFromPlace(place, coord) },
                 ["➕ 일정에 추가"]
               ),
             ]),
