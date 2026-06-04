@@ -1,6 +1,6 @@
 // components/spotCard.js — 타임라인의 스팟 카드 한 개 렌더링.
 import { el } from "../util.js";
-import { CATEGORIES, MOVE_MODES, formatCost } from "../model.js";
+import { CATEGORIES, MOVE_MODES, formatCost, formatYen } from "../model.js";
 import { formatMin } from "../geo.js";
 
 // spot: Spot, opts: { onEdit, onDelete }
@@ -9,7 +9,12 @@ export function spotCard(spot, opts = {}) {
 
   const badges = [];
   if (spot.cost != null && spot.cost !== "") {
-    badges.push(el("span.b.cost", {}, [formatCost(spot.cost)]));
+    badges.push(
+      el("span.b.cost", {}, [
+        formatCost(spot.cost),
+        el("span.yen", {}, [` ${formatYen(spot.cost)}`]),
+      ])
+    );
   }
   if (spot.lat == null || spot.lng == null) {
     badges.push(el("span.b.noloc", {}, ["위치 미지정"]));

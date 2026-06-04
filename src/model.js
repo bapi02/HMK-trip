@@ -1,5 +1,6 @@
 // model.js — 데이터 모델 헬퍼 + 카테고리 정의 + 시드 데이터
 // store 어댑터와 뷰가 공유하는 순수 데이터 유틸. (저장소 접근 없음)
+import { toKRW, fmtKRW, fmtJPY } from "./currency.js";
 
 // 카테고리 정의 — 컬러/라벨/아이콘을 한 곳에서. 타임라인·지도 핀에 일관 적용.
 export const CATEGORIES = {
@@ -176,9 +177,13 @@ export function dayMoveMin(day) {
   return day.spots.reduce((s, sp) => s + (Number(sp.moveMin) || 0), 0);
 }
 
-export function formatCost(n) {
-  if (!n) return "¥0";
-  return "¥" + Number(n).toLocaleString("ja-JP");
+// 비용은 엔화로 저장하고, 표시는 원화(₩) 환산이 기본.
+export function formatCost(yen) {
+  return fmtKRW(toKRW(yen));
+}
+// 엔화 원본 표기 (입력/병기용).
+export function formatYen(yen) {
+  return fmtJPY(yen);
 }
 
 // "2026-07-10T09:30" → "7.10(목) 09:30" (한국어 요일)

@@ -3,6 +3,7 @@
 import { getStore } from "./store.js";
 import { renderLibrary } from "./views/library.js";
 import { renderTrip } from "./views/trip.js";
+import { loadRate } from "./currency.js";
 import { el, clear } from "./util.js";
 
 let _store = null;
@@ -42,6 +43,8 @@ async function router() {
 }
 
 async function boot() {
+  // 환율 먼저 확보(캐시 있으면 즉시, 없으면 fetch — 실패해도 기본값으로 진행).
+  await loadRate();
   _store = await getStore();
 
   const app = document.getElementById("app");

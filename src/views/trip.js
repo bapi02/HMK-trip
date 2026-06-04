@@ -12,6 +12,7 @@ import {
   formatDateTime,
 } from "../model.js";
 import { formatMin } from "../geo.js";
+import { getRate, rateAsOf } from "../currency.js";
 import { renderTimeline } from "./timeline.js";
 import { renderMap, disposeMap } from "./map.js";
 import { navigate } from "../main.js";
@@ -110,6 +111,14 @@ export async function renderTrip(root, store, tripId) {
         stat("총 예상 비용", formatCost(totalCost(trip))),
         stat("총 이동시간", formatMin(totalMoveMin(trip)) || "0분"),
         stat("스팟 수", String(trip.schedule.reduce((n, d) => n + d.spots.length, 0))),
+      ])
+    );
+    // 환율 기준 표기
+    root.appendChild(
+      el("div.fx-note", {}, [
+        `💱 1¥ = ₩${getRate().toFixed(2)} 기준${
+          rateAsOf() ? ` · ${rateAsOf()}` : " · 기본값"
+        } · 비용은 엔화로 입력하면 원화로 환산돼요`,
       ])
     );
 
