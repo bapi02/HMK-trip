@@ -13,20 +13,10 @@ export function dirUrl(o, d, mode) {
   );
 }
 
-// 대중교통 출발시각.
-// 구글 대중교통은 '가까운 미래'만 시간표 데이터가 있어, 여행 날짜가 멀면
-// 지하철 결과가 비어버린다. 그래서 3일 이내면 그날 10시, 아니면 '내일 10시'로 대체.
-function departureTime(day) {
-  const now = new Date();
-  const base = day.date ? new Date(day.date + "T10:00:00") : now;
-  const within3d =
-    base.getTime() > now.getTime() &&
-    base.getTime() < now.getTime() + 3 * 86400000;
-  if (within3d) return base;
-  const rep = new Date(now);
-  rep.setDate(rep.getDate() + 1);
-  rep.setHours(10, 0, 0, 0);
-  return rep;
+// 대중교통 출발시각 = '지금 출발'(실시간). 구글맵 대중교통을 쓰는 가장 일반적인 방식이고,
+// 먼 미래 날짜라 시간표가 없어 지하철이 비는 문제도 함께 해결된다.
+function departureTime() {
+  return new Date(Date.now() + 60 * 1000); // 1분 뒤(현재 시각 기준)
 }
 
 // 그날 기준 숙소 id 결정: 저장값 → 숙소 카테고리 → 첫 좌표 스팟.
@@ -93,7 +83,7 @@ export async function computeHotelTimes(day, hotelId) {
   const google = await loadGoogleMaps();
   const origin = { lat: hotel.lat, lng: hotel.lng };
   const dests = courses.map((s) => ({ lat: s.lat, lng: s.lng }));
-  const depTime = departureTime(day);
+  const depTime = departureTime();
 
   // 순차 호출(병렬 시 순간 호출 제한에 잘 걸림).
   const drive = await distanceMatrix(
