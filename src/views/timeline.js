@@ -78,9 +78,17 @@ export function renderTimeline(container, ctx) {
     clear(row);
     row.appendChild(el("span.rail"));
     if (r.error) {
+      const hint =
+        r.error === "REQUEST_DENIED"
+          ? "키 제한 또는 API 미설정"
+          : r.error === "OVER_QUERY_LIMIT"
+          ? "할당량 초과/결제 확인"
+          : r.error === "ZERO_RESULTS"
+          ? "경로 없음"
+          : "";
       row.appendChild(
         el("span.sf-text.err", {}, [
-          "🏨 숙소 기준 — Distance Matrix API 사용 설정을 확인해주세요",
+          `🏨 숙소 기준 길찾기 실패 (${r.error}${hint ? " · " + hint : ""})`,
         ])
       );
       return;
