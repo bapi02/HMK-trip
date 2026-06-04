@@ -53,6 +53,13 @@ export function spotCard(spot, opts = {}) {
       ),
       main,
       el("div.row-actions", {}, [
+        ...(opts.extraActions || []).map((a) =>
+          el(
+            "button.icon-btn",
+            { title: a.title, onclick: () => a.onClick?.() },
+            [a.icon]
+          )
+        ),
         el(
           "button.icon-btn",
           { title: "편집", onclick: () => opts.onEdit?.(spot) },

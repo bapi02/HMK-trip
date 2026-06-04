@@ -7,6 +7,8 @@ import {
   dayCost,
   dayMoveMin,
   formatCost,
+  uid,
+  pickedSpotId,
 } from "../model.js";
 import { estimateMoveMin, haversineKm, formatKm, formatMin } from "../geo.js";
 import { hasGoogleMaps } from "../mapsConfig.js";
@@ -116,37 +118,149 @@ export function renderTimeline(container, ctx) {
     row.appendChild(parts);
   }
 
-  day.spots.forEach((spot, i) => {
-    if (hotelMode) {
-      // 숙소 기준: 기준 숙소엔 출발 표시, 나머지엔 "숙소에서 X분" 자리 표시(비동기 채움).
+  // "🏨 숙소에서 …" 자리표시 줄 (비동기로 채워짐).
+  function fromPlaceholder(spotId) {
+    return el("div.spot-from", { dataset: { from: spotId } }, [
+      el("span.rail"),
+      el("span.sf-text", {}, ["🏨 숙소에서 이동시간 계산 중…"]),
+    ]);
+  }
+
+  // 이 스팟을 윗 스팟과 "택1 선택지"로 묶기.
+  async function groupWithPrev(spot) {
+    const idx = day.spots.findIndex((s) => s.id === spot.id);
+    if (idx <= 0) {
+      toast("위에 묶을 스팟이 없어요");
+      return;
+    }
+    const prev = day.spots[idx - 1];
+    if (prev.id === hotelId) {
+      toast("기준 숙소는 선택지로 묶을 수 없어요");
+      return;
+    }
+    const gid = prev.groupId || spot.groupId || uid("grp");
+    prev.groupId = gid;
+    spot.groupId = gid;
+    const members = day.spots.filter((s) => s.groupId === gid);
+    if (!members.some((s) => s.picked)) members[0].picked = true;
+    await ctx.persist();
+    ctx.refresh();
+  }
+
+  // 선택지에서 빼기.
+  async function ungroup(spot) {
+    const gid = spot.groupId;
+    spot.groupId = null;
+    spot.picked = false;
+    const rest = day.spots.filter((s) => s.groupId === gid);
+    if (rest.length === 1) {
+      rest[0].groupId = null;
+      rest[0].picked = false;
+    } else if (rest.length && !rest.some((s) => s.picked)) {
+      rest[0].picked = true;
+    }
+    await ctx.persist();
+    ctx.refresh();
+  }
+
+  // 그룹에서 이 후보를 선택(실제 갈 곳).
+  async function pick(spot) {
+    const gid = spot.groupId;
+    day.spots.forEach((s) => {
+      if (s.groupId === gid) s.picked = s.id === spot.id;
+    });
+    await ctx.persist();
+    ctx.refresh();
+  }
+
+  // 한 그룹(택1 선택지) 클러스터 렌더.
+  function renderCluster(members) {
+    const pid = pickedSpotId(day, members[0].groupId);
+    const cluster = el("li.choice-cluster", {}, [
+      el("div.cc-head", {}, [
+        el("span", {}, ["🔀 이동 선택지"]),
+        el("span.cc-sub", {}, [`${members.length}곳 중 택1 · 숙소에서 가까운 곳 선택`]),
+      ]),
+    ]);
+    members.forEach((m) => {
+      const picked = m.id === pid;
+      const body = el("div.ci-body");
+      if (m.lat != null && m.lng != null && hotelId && m.id !== hotelId) {
+        body.appendChild(fromPlaceholder(m.id));
+      }
+      body.appendChild(
+        spotCard(m, {
+          onEdit: editSpot,
+          onDelete: deleteSpot,
+          extraActions: [
+            { icon: "⎇", title: "선택지에서 빼기", onClick: () => ungroup(m) },
+          ],
+        })
+      );
+      cluster.appendChild(
+        el("div.choice-item" + (picked ? ".picked" : ""), {}, [
+          el(
+            "button.pick-radio",
+            { title: picked ? "선택됨" : "이걸로 선택", onclick: () => pick(m) },
+            [picked ? "◉" : "○"]
+          ),
+          body,
+        ])
+      );
+    });
+    return cluster;
+  }
+
+  if (hotelMode) {
+    // 숙소 기준 모드: 그룹은 클러스터로, 나머지는 개별 + 숙소 기준 시간.
+    const renderedGroups = new Set();
+    day.spots.forEach((spot) => {
+      if (spot.groupId) {
+        if (renderedGroups.has(spot.groupId)) return;
+        renderedGroups.add(spot.groupId);
+        list.appendChild(
+          renderCluster(day.spots.filter((s) => s.groupId === spot.groupId))
+        );
+        return;
+      }
       if (spot.id === hotelId) {
         list.appendChild(
           el("li.hotel-base", {}, ["🏨 기준 숙소 · 여기서 출발해 각 코스로"])
         );
       } else if (spot.lat != null && spot.lng != null && hotelId) {
-        list.appendChild(
-          el("div.spot-from", { dataset: { from: spot.id } }, [
-            el("span.rail"),
-            el("span.sf-text", {}, ["🏨 숙소에서 이동시간 계산 중…"]),
-          ])
-        );
+        list.appendChild(fromPlaceholder(spot.id));
       }
-    } else if (i > 0) {
-      // 폴백(키 없음): 이전 스팟 → 이 스팟 직선거리 어림치
-      const prev = day.spots[i - 1];
-      const km = haversineKm(prev, spot);
-      const est = estimateMoveMin(prev, spot, spot.moveMode);
-      const row = moveRow({
-        moveMode: spot.moveMode,
-        moveMin: spot.moveMin,
-        estMin: est,
-        km,
-        kmLabel: formatKm(km),
-      });
-      if (row) list.appendChild(row);
-    }
-    list.appendChild(spotCard(spot, { onEdit: editSpot, onDelete: deleteSpot }));
-  });
+      const idx = day.spots.findIndex((s) => s.id === spot.id);
+      const canGroup = idx > 0 && day.spots[idx - 1].id !== hotelId;
+      list.appendChild(
+        spotCard(spot, {
+          onEdit: editSpot,
+          onDelete: deleteSpot,
+          extraActions: canGroup
+            ? [{ icon: "⎇", title: "윗 스팟과 선택지로 묶기", onClick: () => groupWithPrev(spot) }]
+            : [],
+        })
+      );
+    });
+  } else {
+    // 폴백(키 없음): 이전 스팟 → 이 스팟 직선거리 어림치
+    day.spots.forEach((spot, i) => {
+      if (i > 0) {
+        const prev = day.spots[i - 1];
+        const km = haversineKm(prev, spot);
+        const est = estimateMoveMin(prev, spot, spot.moveMode);
+        const row = moveRow({
+          moveMode: spot.moveMode,
+          moveMin: spot.moveMin,
+          estMin: est,
+          km,
+          kmLabel: formatKm(km),
+        });
+        if (row) list.appendChild(row);
+      }
+      list.appendChild(spotCard(spot, { onEdit: editSpot, onDelete: deleteSpot }));
+    });
+  }
 
   container.appendChild(list);
 

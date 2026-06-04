@@ -282,6 +282,29 @@ button { font-family: var(--font-body); cursor: pointer; }
 .spot-from .sf-mode.drive { color: var(--c-hotel); background: color-mix(in srgb, var(--c-hotel) 9%, transparent); }
 .spot-from .sf-mode.transit { color: var(--c-transport); background: color-mix(in srgb, var(--c-transport) 9%, transparent); }
 
+/* ── 이동 선택지 클러스터 (택1) ──────────────── */
+.choice-cluster {
+  list-style: none; margin: 0 0 4px; padding: 8px 10px 4px;
+  border: 1.5px dashed var(--line-strong); border-radius: var(--radius);
+  background: color-mix(in srgb, var(--paper-2) 50%, transparent);
+}
+.cc-head { display: flex; align-items: baseline; gap: 8px; margin: 2px 4px 8px; flex-wrap: wrap; }
+.cc-head span:first-child { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.cc-head .cc-sub { font-size: 11.5px; color: var(--ink-faint); }
+.choice-item { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; }
+.choice-item .ci-body { flex: 1; min-width: 0; }
+.choice-item .pick-radio {
+  flex: 0 0 auto; margin-top: 16px; width: 30px; height: 30px; border-radius: 50%;
+  border: 1.5px solid var(--line-strong); background: var(--card);
+  font-size: 16px; color: var(--ink-faint); display: grid; place-items: center;
+}
+.choice-item.picked .pick-radio { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+/* 선택 안 된 후보는 살짝 흐리게 */
+.choice-item:not(.picked) .ci-body { opacity: .62; }
+.choice-item:not(.picked) .ci-body .spot-card { box-shadow: none; }
+.choice-item.picked .ci-body .spot-card { border-color: var(--accent); }
+.choice-item .ci-body .spot-from { margin-left: 6px; }
+
 .spot-list { list-style: none; margin: 0; padding: 0; }
 
 .spot-move {

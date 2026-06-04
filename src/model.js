@@ -79,6 +79,8 @@ export function newSpot(partial = {}) {
     links: [],
     photos: [],
     placeId: null, // 구글 장소 ID (리뷰·사진 재조회용)
+    groupId: null, // 같은 그룹 = "택1" 이동 선택지 묶음
+    picked: false, // 그룹 내에서 선택된(실제 갈) 후보
     ...partial,
   };
 }
@@ -150,31 +152,48 @@ export function flightCost(trip) {
   );
 }
 
-// 여행 전체 예상 비용 합계(스팟 + 항공권).
+// 그룹(택1 선택지)에서 선택된 스팟 id. 아무도 안 골랐으면 첫 멤버.
+export function pickedSpotId(day, groupId) {
+  const members = day.spots.filter((s) => s.groupId === groupId);
+  if (!members.length) return null;
+  return (members.find((s) => s.picked) || members[0]).id;
+}
+
+// 합계·계획 계산용 스팟 목록: 그룹은 선택된 1곳만 포함(나머지 후보 제외).
+export function effectiveSpots(day) {
+  const seen = new Set();
+  const out = [];
+  for (const s of day.spots) {
+    if (!s.groupId) {
+      out.push(s);
+      continue;
+    }
+    if (seen.has(s.groupId)) continue;
+    seen.add(s.groupId);
+    const pid = pickedSpotId(day, s.groupId);
+    const picked = day.spots.find((x) => x.id === pid);
+    if (picked) out.push(picked);
+  }
+  return out;
+}
+
+// 여행 전체 예상 비용 합계(스팟 + 항공권). 그룹은 선택된 후보만.
 export function totalCost(trip) {
-  const spots = trip.schedule.reduce(
-    (sum, day) =>
-      sum + day.spots.reduce((s, sp) => s + (Number(sp.cost) || 0), 0),
-    0
-  );
+  const spots = trip.schedule.reduce((sum, day) => sum + dayCost(day), 0);
   return spots + flightCost(trip);
 }
 
-// 여행 전체 이동시간 합계(분).
+// 여행 전체 이동시간 합계(분). 그룹은 선택된 후보만.
 export function totalMoveMin(trip) {
-  return trip.schedule.reduce(
-    (sum, day) =>
-      sum + day.spots.reduce((s, sp) => s + (Number(sp.moveMin) || 0), 0),
-    0
-  );
+  return trip.schedule.reduce((sum, day) => sum + dayMoveMin(day), 0);
 }
 
 export function dayCost(day) {
-  return day.spots.reduce((s, sp) => s + (Number(sp.cost) || 0), 0);
+  return effectiveSpots(day).reduce((s, sp) => s + (Number(sp.cost) || 0), 0);
 }
 
 export function dayMoveMin(day) {
-  return day.spots.reduce((s, sp) => s + (Number(sp.moveMin) || 0), 0);
+  return effectiveSpots(day).reduce((s, sp) => s + (Number(sp.moveMin) || 0), 0);
 }
 
 // 비용은 엔화로 저장하고, 표시는 원화(₩) 환산이 기본.
