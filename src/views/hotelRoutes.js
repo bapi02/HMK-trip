@@ -13,10 +13,20 @@ export function dirUrl(o, d, mode) {
   );
 }
 
-// 대중교통 출발시각 — 그날 오전 10시(미래) 기준, 지난 날짜면 1시간 뒤.
+// 대중교통 출발시각.
+// 구글 대중교통은 '가까운 미래'만 시간표 데이터가 있어, 여행 날짜가 멀면
+// 지하철 결과가 비어버린다. 그래서 3일 이내면 그날 10시, 아니면 '내일 10시'로 대체.
 function departureTime(day) {
-  const base = day.date ? new Date(day.date + "T10:00:00") : new Date();
-  return base.getTime() > Date.now() ? base : new Date(Date.now() + 3600000);
+  const now = new Date();
+  const base = day.date ? new Date(day.date + "T10:00:00") : now;
+  const within3d =
+    base.getTime() > now.getTime() &&
+    base.getTime() < now.getTime() + 3 * 86400000;
+  if (within3d) return base;
+  const rep = new Date(now);
+  rep.setDate(rep.getDate() + 1);
+  rep.setHours(10, 0, 0, 0);
+  return rep;
 }
 
 // 그날 기준 숙소 id 결정: 저장값 → 숙소 카테고리 → 첫 좌표 스팟.
