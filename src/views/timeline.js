@@ -179,7 +179,7 @@ export function renderTimeline(container, ctx) {
     const cluster = el("li.choice-cluster", {}, [
       el("div.cc-head", {}, [
         el("span", {}, ["🔀 이동 선택지"]),
-        el("span.cc-sub", {}, [`${members.length}곳 중 택1 · 출발 기준에서 가까운 곳 선택`]),
+        el("span.cc-sub", {}, [`${members.length}곳 중 택1`]),
       ]),
     ]);
     members.forEach((m) => {
