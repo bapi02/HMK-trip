@@ -118,12 +118,12 @@ export function renderHotelSelector(ctx) {
   const located = day.spots.filter((s) => s.lat != null && s.lng != null);
 
   const bar = el("div.hotel-bar");
-  bar.appendChild(el("span.hb-icon", {}, ["🏨"]));
-  bar.appendChild(el("span.hb-label", {}, ["기준 숙소"]));
+  bar.appendChild(el("span.hb-icon", {}, ["🚩"]));
+  bar.appendChild(el("span.hb-label", {}, ["출발 기준"]));
 
   if (located.length < 2) {
     bar.appendChild(
-      el("span.hb-hint", {}, ["좌표 있는 스팟이 2곳 이상이면 숙소 기준 이동시간을 보여줘요"])
+      el("span.hb-hint", {}, ["좌표 있는 스팟이 2곳 이상이면 출발 기준 이동시간을 보여줘요"])
     );
     return bar;
   }

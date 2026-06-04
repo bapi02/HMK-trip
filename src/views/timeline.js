@@ -90,7 +90,7 @@ export function renderTimeline(container, ctx) {
           : "";
       row.appendChild(
         el("span.sf-text.err", {}, [
-          `🏨 숙소 기준 길찾기 실패 (${r.error}${hint ? " · " + hint : ""})`,
+          `🚩 출발 기준 길찾기 실패 (${r.error}${hint ? " · " + hint : ""})`,
         ])
       );
       return;
@@ -98,7 +98,7 @@ export function renderTimeline(container, ctx) {
     const o = { lat: hotel.lat, lng: hotel.lng };
     const d = { lat: spot.lat, lng: spot.lng };
     const parts = el("span.sf-modes", {}, [
-      el("span.sf-from", {}, ["🏨 숙소에서"]),
+      el("span.sf-from", {}, ["🚩 출발 기준에서"]),
       r.driveText
         ? el(
             "a.sf-mode.drive",
@@ -122,7 +122,7 @@ export function renderTimeline(container, ctx) {
   function fromPlaceholder(spotId) {
     return el("div.spot-from", { dataset: { from: spotId } }, [
       el("span.rail"),
-      el("span.sf-text", {}, ["🏨 숙소에서 이동시간 계산 중…"]),
+      el("span.sf-text", {}, ["🚩 출발 기준에서 이동시간 계산 중…"]),
     ]);
   }
 
@@ -135,7 +135,7 @@ export function renderTimeline(container, ctx) {
     }
     const prev = day.spots[idx - 1];
     if (prev.id === hotelId) {
-      toast("기준 숙소는 선택지로 묶을 수 없어요");
+      toast("출발 기준 스팟은 선택지로 묶을 수 없어요");
       return;
     }
     const gid = prev.groupId || spot.groupId || uid("grp");
@@ -179,7 +179,7 @@ export function renderTimeline(container, ctx) {
     const cluster = el("li.choice-cluster", {}, [
       el("div.cc-head", {}, [
         el("span", {}, ["🔀 이동 선택지"]),
-        el("span.cc-sub", {}, [`${members.length}곳 중 택1 · 숙소에서 가까운 곳 선택`]),
+        el("span.cc-sub", {}, [`${members.length}곳 중 택1 · 출발 기준에서 가까운 곳 선택`]),
       ]),
     ]);
     members.forEach((m) => {
@@ -225,7 +225,7 @@ export function renderTimeline(container, ctx) {
       }
       if (spot.id === hotelId) {
         list.appendChild(
-          el("li.hotel-base", {}, ["🏨 기준 숙소 · 여기서 출발해 각 코스로"])
+          el("li.hotel-base", {}, ["🚩 출발 기준 · 여기서 각 스팟까지 이동시간"])
         );
       } else if (spot.lat != null && spot.lng != null && hotelId) {
         list.appendChild(fromPlaceholder(spot.id));
