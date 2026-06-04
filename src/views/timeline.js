@@ -9,6 +9,7 @@ import {
   formatCost,
 } from "../model.js";
 import { estimateMoveMin, haversineKm, formatKm, formatMin } from "../geo.js";
+import { renderHotelRoutes } from "./hotelRoutes.js";
 
 // ctx: { trip, dayIndex, persist(), refresh() }
 export function renderTimeline(container, ctx) {
@@ -30,6 +31,10 @@ export function renderTimeline(container, ctx) {
       ]),
     ])
   );
+
+  // 숙소 기준 이동시간 패널 (구글맵 키 있을 때만)
+  const hotelPanel = renderHotelRoutes(ctx);
+  if (hotelPanel) container.appendChild(hotelPanel);
 
   const list = el("ul.spot-list");
 
