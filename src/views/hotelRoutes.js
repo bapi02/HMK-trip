@@ -30,7 +30,8 @@ export function pickHotelId(day) {
   return (hotel || located[0]).id;
 }
 
-function distanceMatrix(google, origin, destinations, mode, depTime) {
+// 순간 호출 제한(OVER_QUERY_LIMIT)이면 백오프 재시도.
+function distanceMatrix(google, origin, destinations, mode, depTime, attempt = 0) {
   return new Promise((resolve) => {
     const svc = new google.maps.DistanceMatrixService();
     const req = { origins: [origin], destinations, travelMode: mode };
@@ -38,8 +39,19 @@ function distanceMatrix(google, origin, destinations, mode, depTime) {
       req.transitOptions = { departureTime: depTime };
     }
     svc.getDistanceMatrix(req, (res, status) => {
-      if (status !== "OK" || !res) resolve({ error: status });
-      else resolve({ elements: res.rows[0].elements });
+      if (status === "OK" && res) {
+        resolve({ elements: res.rows[0].elements });
+      } else if (status === "OVER_QUERY_LIMIT" && attempt < 3) {
+        setTimeout(
+          () =>
+            distanceMatrix(google, origin, destinations, mode, depTime, attempt + 1).then(
+              resolve
+            ),
+          500 * Math.pow(2, attempt)
+        );
+      } else {
+        resolve({ error: status });
+      }
     });
   });
 }
@@ -73,10 +85,13 @@ export async function computeHotelTimes(day, hotelId) {
   const dests = courses.map((s) => ({ lat: s.lat, lng: s.lng }));
   const depTime = departureTime(day);
 
-  const [drive, transit] = await Promise.all([
-    distanceMatrix(google, origin, dests, google.maps.TravelMode.DRIVING, depTime),
-    distanceMatrix(google, origin, dests, google.maps.TravelMode.TRANSIT, depTime),
-  ]);
+  // 순차 호출(병렬 시 순간 호출 제한에 잘 걸림).
+  const drive = await distanceMatrix(
+    google, origin, dests, google.maps.TravelMode.DRIVING, depTime
+  );
+  const transit = await distanceMatrix(
+    google, origin, dests, google.maps.TravelMode.TRANSIT, depTime
+  );
 
   courses.forEach((s, i) => {
     const d = drive.elements && drive.elements[i];
@@ -90,7 +105,9 @@ export async function computeHotelTimes(day, hotelId) {
     });
   });
 
-  _cache.set(key, result);
+  // 요청 자체가 거부/한도초과로 실패하면 캐시하지 않는다 → 설정 고친 뒤 새로고침으로 바로 재시도.
+  const fatal = drive.error && transit.error;
+  if (!fatal) _cache.set(key, result);
   return result;
 }
 
