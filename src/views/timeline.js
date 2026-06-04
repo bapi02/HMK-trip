@@ -9,7 +9,13 @@ import {
   formatCost,
 } from "../model.js";
 import { estimateMoveMin, haversineKm, formatKm, formatMin } from "../geo.js";
-import { renderHotelRoutes } from "./hotelRoutes.js";
+import { hasGoogleMaps } from "../mapsConfig.js";
+import {
+  renderHotelSelector,
+  computeHotelTimes,
+  pickHotelId,
+  dirUrl,
+} from "./hotelRoutes.js";
 
 // ctx: { trip, dayIndex, persist(), refresh() }
 export function renderTimeline(container, ctx) {
@@ -32,9 +38,11 @@ export function renderTimeline(container, ctx) {
     ])
   );
 
-  // 숙소 기준 이동시간 패널 (구글맵 키 있을 때만)
-  const hotelPanel = renderHotelRoutes(ctx);
-  if (hotelPanel) container.appendChild(hotelPanel);
+  // 기준 숙소 선택 바 (구글맵 키 있을 때만)
+  const hotelMode = hasGoogleMaps();
+  const hotelId = hotelMode ? pickHotelId(day) : null;
+  const selector = renderHotelSelector(ctx);
+  if (selector) container.appendChild(selector);
 
   const list = el("ul.spot-list");
 
@@ -65,9 +73,58 @@ export function renderTimeline(container, ctx) {
     ctx.refresh();
   }
 
+  // "숙소에서 X분" 줄을 계산 결과로 채운다.
+  function fillFromRow(row, r, hotel, spot) {
+    clear(row);
+    row.appendChild(el("span.rail"));
+    if (r.error) {
+      row.appendChild(
+        el("span.sf-text.err", {}, [
+          "🏨 숙소 기준 — Distance Matrix API 사용 설정을 확인해주세요",
+        ])
+      );
+      return;
+    }
+    const o = { lat: hotel.lat, lng: hotel.lng };
+    const d = { lat: spot.lat, lng: spot.lng };
+    const parts = el("span.sf-modes", {}, [
+      el("span.sf-from", {}, ["🏨 숙소에서"]),
+      r.driveText
+        ? el(
+            "a.sf-mode.drive",
+            { href: dirUrl(o, d, "driving"), target: "_blank", rel: "noopener", title: "택시 길찾기" },
+            [`🚕 ${r.driveText}`]
+          )
+        : null,
+      r.transitText
+        ? el(
+            "a.sf-mode.transit",
+            { href: dirUrl(o, d, "transit"), target: "_blank", rel: "noopener", title: "지하철 길찾기" },
+            [`🚇 ${r.transitText}`]
+          )
+        : null,
+      !r.driveText && !r.transitText ? el("span.sf-text", {}, ["경로 없음"]) : null,
+    ]);
+    row.appendChild(parts);
+  }
+
   day.spots.forEach((spot, i) => {
-    // 이전 스팟 → 이 스팟 이동 정보 (index 0 제외)
-    if (i > 0) {
+    if (hotelMode) {
+      // 숙소 기준: 기준 숙소엔 출발 표시, 나머지엔 "숙소에서 X분" 자리 표시(비동기 채움).
+      if (spot.id === hotelId) {
+        list.appendChild(
+          el("li.hotel-base", {}, ["🏨 기준 숙소 · 여기서 출발해 각 코스로"])
+        );
+      } else if (spot.lat != null && spot.lng != null && hotelId) {
+        list.appendChild(
+          el("div.spot-from", { dataset: { from: spot.id } }, [
+            el("span.rail"),
+            el("span.sf-text", {}, ["🏨 숙소에서 이동시간 계산 중…"]),
+          ])
+        );
+      }
+    } else if (i > 0) {
+      // 폴백(키 없음): 이전 스팟 → 이 스팟 직선거리 어림치
       const prev = day.spots[i - 1];
       const km = haversineKm(prev, spot);
       const est = estimateMoveMin(prev, spot, spot.moveMode);
@@ -84,6 +141,24 @@ export function renderTimeline(container, ctx) {
   });
 
   container.appendChild(list);
+
+  // 숙소 기준 이동시간 비동기 계산 후 각 줄에 채우기.
+  if (hotelMode && hotelId) {
+    const located = day.spots.filter((s) => s.lat != null && s.lng != null);
+    const hotel = located.find((s) => s.id === hotelId);
+    if (hotel && located.length >= 2) {
+      computeHotelTimes(day, hotelId)
+        .then((map) => {
+          map.forEach((r, spotId) => {
+            const row = list.querySelector(`.spot-from[data-from="${spotId}"]`);
+            if (!row) return;
+            const spot = day.spots.find((s) => s.id === spotId);
+            fillFromRow(row, r, hotel, spot);
+          });
+        })
+        .catch(() => {});
+    }
+  }
 
   // 스팟 추가 버튼
   container.appendChild(
@@ -112,7 +187,7 @@ export function renderTimeline(container, ctx) {
       handle: ".handle",
       animation: 160,
       group: { name: "spots", pull: true, put: true },
-      filter: ".spot-move",
+      filter: ".spot-move, .spot-from, .hotel-base",
       draggable: ".spot-card",
       ghostClass: "sortable-ghost",
       chosenClass: "sortable-chosen",

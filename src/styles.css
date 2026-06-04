@@ -243,47 +243,44 @@ button { font-family: var(--font-body); cursor: pointer; }
 .day-meta .date { color: var(--ink-soft); font-size: 13px; }
 .day-meta .totals { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); display: flex; gap: 12px; }
 
-/* ── 숙소 기준 이동시간 패널 ────────────────── */
-.hotel-routes {
+/* ── 기준 숙소 선택 바 ──────────────────────── */
+.hotel-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   border: 1px solid var(--line); border-left: 4px solid var(--c-hotel);
   border-radius: var(--radius-sm); background: var(--card);
-  margin: 0 0 14px; box-shadow: var(--shadow-sm); overflow: hidden;
+  padding: 9px 13px; margin: 0 0 14px; box-shadow: var(--shadow-sm);
 }
-.hotel-routes summary {
-  cursor: pointer; padding: 11px 14px; font-weight: 700; font-size: 14.5px;
-  display: flex; align-items: baseline; gap: 9px; list-style: none;
-}
-.hotel-routes summary::-webkit-details-marker { display: none; }
-.hotel-routes summary::after { content: "▾"; margin-left: auto; color: var(--ink-faint); transition: transform .2s; }
-.hotel-routes[open] summary::after { transform: rotate(180deg); }
-.hotel-routes .hr-sub { font-size: 12px; color: var(--ink-faint); font-weight: 400; }
-.hr-body { padding: 4px 14px 14px; }
-.hr-hint { font-size: 13px; color: var(--ink-soft); padding: 8px 0; line-height: 1.5; }
-.hr-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.hr-controls label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
-.hr-select {
-  flex: 1; min-width: 140px; font-family: var(--font-body); font-size: 14px;
+.hotel-bar .hb-icon { font-size: 15px; }
+.hotel-bar .hb-label { font-size: 13px; font-weight: 700; color: var(--c-hotel); }
+.hotel-bar .hb-select {
+  flex: 1; min-width: 150px; font-family: var(--font-body); font-size: 14px;
   border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  padding: 8px 10px; background: var(--paper); color: var(--ink);
+  padding: 7px 10px; background: var(--paper); color: var(--ink);
 }
-.hr-loading { color: var(--ink-faint); font-size: 13px; padding: 8px 0; }
-.hr-from { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin: 6px 0 8px; }
-.hr-row {
-  display: flex; align-items: center; gap: 10px; padding: 9px 0;
-  border-top: 1px dashed var(--line);
+.hotel-bar .hb-hint { font-size: 11.5px; color: var(--ink-faint); }
+
+/* 기준 숙소 출발 표시 */
+.hotel-base {
+  list-style: none; font-size: 12.5px; color: var(--c-hotel); font-weight: 600;
+  margin: 0 0 4px 6px; padding: 2px 0;
 }
-.hr-dest { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 600; }
-.hr-dest span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hr-cat { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; flex: 0 0 auto; }
-.hr-modes { display: flex; gap: 6px; flex: 0 0 auto; }
-.hr-mode {
-  font-size: 12.5px; font-weight: 600; padding: 5px 9px; border-radius: 999px;
+
+/* "숙소에서 X분" 줄 */
+.spot-from {
+  display: flex; align-items: center; gap: 9px; margin: 0 0 0 26px;
+  color: var(--ink-soft); font-size: 12.5px; padding: 4px 0;
+}
+.spot-from .rail { width: 2px; height: 18px; background: var(--c-hotel); opacity: .5; border-radius: 2px; flex: 0 0 auto; }
+.spot-from .sf-text { font-style: italic; opacity: .85; }
+.spot-from .sf-text.err { color: var(--accent-deep); font-style: normal; }
+.spot-from .sf-modes { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.spot-from .sf-from { color: var(--ink-faint); }
+.spot-from .sf-mode {
+  font-weight: 600; padding: 3px 9px; border-radius: 999px;
   border: 1px solid var(--line-strong); white-space: nowrap;
 }
-.hr-mode.drive { color: var(--c-hotel); background: color-mix(in srgb, var(--c-hotel) 8%, transparent); }
-.hr-mode.transit { color: var(--c-transport); background: color-mix(in srgb, var(--c-transport) 8%, transparent); }
-.hr-apply { display: flex; gap: 2px; flex: 0 0 auto; }
-.hr-attrib { font-size: 11.5px; color: var(--ink-faint); margin-top: 10px; }
+.spot-from .sf-mode.drive { color: var(--c-hotel); background: color-mix(in srgb, var(--c-hotel) 9%, transparent); }
+.spot-from .sf-mode.transit { color: var(--c-transport); background: color-mix(in srgb, var(--c-transport) 9%, transparent); }
 
 .spot-list { list-style: none; margin: 0; padding: 0; }
 

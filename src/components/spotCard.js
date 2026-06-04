@@ -18,8 +18,6 @@ export function spotCard(spot, opts = {}) {
   }
   if (spot.lat == null || spot.lng == null) {
     badges.push(el("span.b.noloc", {}, ["위치 미지정"]));
-  } else {
-    badges.push(el("span.b", {}, [`📍 ${spot.lat.toFixed(3)}, ${spot.lng.toFixed(3)}`]));
   }
   if (spot.links && spot.links.length) {
     badges.push(el("span.b", {}, [`🔗 ${spot.links.length}`]));
