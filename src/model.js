@@ -196,6 +196,30 @@ export function dayMoveMin(day) {
   return effectiveSpots(day).reduce((s, sp) => s + (Number(sp.moveMin) || 0), 0);
 }
 
+// 그날 스팟을 시간순으로 정렬. 그룹(택1 선택지)은 한 덩어리로 유지(그룹 내 최소 시간 기준),
+// 시간 없는 항목은 원래 순서대로 맨 뒤에.
+export function sortDaySpotsByTime(day) {
+  const items = [];
+  const seen = new Set();
+  for (const s of day.spots) {
+    if (s.groupId) {
+      if (seen.has(s.groupId)) continue;
+      seen.add(s.groupId);
+      const members = day.spots.filter((x) => x.groupId === s.groupId);
+      const times = members.map((m) => m.time).filter(Boolean).sort();
+      items.push({ members, time: times[0] || "" });
+    } else {
+      items.push({ members: [s], time: s.time || "" });
+    }
+  }
+  const timed = items
+    .filter((it) => it.time)
+    .sort((a, b) => a.time.localeCompare(b.time));
+  const untimed = items.filter((it) => !it.time);
+  day.spots = [...timed, ...untimed].flatMap((it) => it.members);
+  return day;
+}
+
 // 비용은 엔화로 저장하고, 표시는 원화(₩) 환산이 기본.
 export function formatCost(yen) {
   return fmtKRW(toKRW(yen));

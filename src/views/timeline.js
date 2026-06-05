@@ -9,6 +9,7 @@ import {
   formatCost,
   uid,
   pickedSpotId,
+  sortDaySpotsByTime,
 } from "../model.js";
 import { estimateMoveMin, haversineKm, formatKm, formatMin } from "../geo.js";
 import { hasGoogleMaps } from "../mapsConfig.js";
@@ -61,6 +62,7 @@ export function renderTimeline(container, ctx) {
       onSave: async (updated) => {
         const idx = day.spots.findIndex((s) => s.id === spot.id);
         if (idx >= 0) day.spots[idx] = updated;
+        sortDaySpotsByTime(day);
         await ctx.persist();
         ctx.refresh();
       },
@@ -305,6 +307,7 @@ export function renderTimeline(container, ctx) {
             title: "새 스팟",
             onSave: async (updated) => {
               day.spots.push(updated);
+              sortDaySpotsByTime(day);
               await ctx.persist();
               ctx.refresh();
             },
