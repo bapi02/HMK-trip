@@ -146,6 +146,6 @@ export function renderHotelSelector(ctx) {
     select.appendChild(o);
   });
   bar.appendChild(select);
-  bar.appendChild(el("span.hb-hint", {}, ["각 스팟까지 🚕택시 · 🚇지하철"]));
+  bar.appendChild(el("span.hb-hint", {}, ["각 스팟까지 최단 이동시간(🚕/🚇)"]));
   return bar;
 }

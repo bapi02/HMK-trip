@@ -281,6 +281,7 @@ button { font-family: var(--font-body); cursor: pointer; }
 }
 .spot-from .sf-mode.drive { color: var(--c-hotel); background: color-mix(in srgb, var(--c-hotel) 9%, transparent); }
 .spot-from .sf-mode.transit { color: var(--c-transport); background: color-mix(in srgb, var(--c-transport) 9%, transparent); }
+.spot-from .sf-fast { font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; }
 
 /* ── 이동 선택지 클러스터 (택1) ──────────────── */
 .choice-cluster {

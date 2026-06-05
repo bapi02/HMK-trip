@@ -97,25 +97,42 @@ export function renderTimeline(container, ctx) {
     }
     const o = { lat: hotel.lat, lng: hotel.lng };
     const d = { lat: spot.lat, lng: spot.lng };
-    const parts = el("span.sf-modes", {}, [
-      el("span.sf-from", {}, ["🚩 출발 기준에서"]),
-      r.driveText
-        ? el(
-            "a.sf-mode.drive",
-            { href: dirUrl(o, d, "driving"), target: "_blank", rel: "noopener", title: "택시 길찾기" },
-            [`🚕 ${r.driveText}`]
-          )
-        : null,
-      r.transitText
-        ? el(
-            "a.sf-mode.transit",
-            { href: dirUrl(o, d, "transit"), target: "_blank", rel: "noopener", title: "지하철 길찾기" },
-            [`🚇 ${r.transitText}`]
-          )
-        : null,
-      !r.driveText && !r.transitText ? el("span.sf-text", {}, ["경로 없음"]) : null,
-    ]);
-    row.appendChild(parts);
+
+    // 택시·지하철 중 '가장 빠른' 하나만 표시.
+    const opts = [];
+    if (r.driveMin != null)
+      opts.push({ mode: "driving", icon: "🚕", text: r.driveText, min: r.driveMin });
+    if (r.transitMin != null)
+      opts.push({ mode: "transit", icon: "🚇", text: r.transitText, min: r.transitMin });
+
+    if (!opts.length) {
+      row.appendChild(
+        el("span.sf-modes", {}, [
+          el("span.sf-from", {}, ["🚩 출발 기준에서"]),
+          el("span.sf-text", {}, ["경로 없음"]),
+        ])
+      );
+      return;
+    }
+
+    opts.sort((a, b) => a.min - b.min);
+    const best = opts[0];
+    row.appendChild(
+      el("span.sf-modes", {}, [
+        el("span.sf-from", {}, ["🚩 출발 기준에서"]),
+        el(
+          "a.sf-mode." + (best.mode === "transit" ? "transit" : "drive"),
+          {
+            href: dirUrl(o, d, best.mode),
+            target: "_blank",
+            rel: "noopener",
+            title: best.mode === "transit" ? "지하철 길찾기" : "택시 길찾기",
+          },
+          [`${best.icon} ${best.text}`]
+        ),
+        el("span.sf-fast", {}, ["최단"]),
+      ])
+    );
   }
 
   // "🏨 숙소에서 …" 자리표시 줄 (비동기로 채워짐).
