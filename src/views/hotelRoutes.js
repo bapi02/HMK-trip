@@ -56,6 +56,41 @@ function distanceMatrix(google, origin, destinations, mode, depTime, attempt = 0
   });
 }
 
+// 대중교통은 Directions API로 조회(Distance Matrix보다 경로를 잘 잡음).
+// 대안 경로 중 '가장 빠른' 소요시간을 반환. 경로 없거나 미설정이면 null.
+function directionsTransit(google, origin, dest, depTime, attempt = 0) {
+  return new Promise((resolve) => {
+    const ds = new google.maps.DirectionsService();
+    ds.route(
+      {
+        origin,
+        destination: dest,
+        travelMode: google.maps.TravelMode.TRANSIT,
+        transitOptions: { departureTime: depTime },
+        provideRouteAlternatives: true,
+      },
+      (res, status) => {
+        if (status === "OK" && res && res.routes && res.routes.length) {
+          let best = { sec: Infinity, text: null };
+          res.routes.forEach((rt) => {
+            const leg = rt.legs && rt.legs[0];
+            const sec = leg && leg.duration && leg.duration.value;
+            if (sec != null && sec < best.sec) best = { sec, text: leg.duration.text };
+          });
+          resolve(best.text ? { min: Math.round(best.sec / 60), text: best.text } : null);
+        } else if (status === "OVER_QUERY_LIMIT" && attempt < 3) {
+          setTimeout(
+            () => directionsTransit(google, origin, dest, depTime, attempt + 1).then(resolve),
+            500 * Math.pow(2, attempt)
+          );
+        } else {
+          resolve(null); // ZERO_RESULTS / REQUEST_DENIED(미설정) 등 → 지하철 없음
+        }
+      }
+    );
+  });
+}
+
 // 좌표·숙소·날짜가 같으면 재호출 안 하도록 세션 캐시.
 const _cache = new Map();
 function cacheKey(day, hotelId) {
@@ -85,29 +120,30 @@ export async function computeHotelTimes(day, hotelId) {
   const dests = courses.map((s) => ({ lat: s.lat, lng: s.lng }));
   const depTime = departureTime();
 
-  // 순차 호출(병렬 시 순간 호출 제한에 잘 걸림).
+  // 차량은 DistanceMatrix(한 번에), 지하철은 Directions(목적지별)로.
   const drive = await distanceMatrix(
     google, origin, dests, google.maps.TravelMode.DRIVING, depTime
   );
-  const transit = await distanceMatrix(
-    google, origin, dests, google.maps.TravelMode.TRANSIT, depTime
+  const transitArr = await Promise.all(
+    courses.map((c) =>
+      directionsTransit(google, origin, { lat: c.lat, lng: c.lng }, depTime)
+    )
   );
 
   courses.forEach((s, i) => {
     const d = drive.elements && drive.elements[i];
-    const t = transit.elements && transit.elements[i];
+    const t = transitArr[i];
     result.set(s.id, {
       driveText: d && d.status === "OK" ? d.duration.text : null,
       driveMin: d && d.status === "OK" ? Math.round(d.duration.value / 60) : null,
-      transitText: t && t.status === "OK" ? t.duration.text : null,
-      transitMin: t && t.status === "OK" ? Math.round(t.duration.value / 60) : null,
-      error: drive.error && transit.error ? drive.error : null,
+      transitText: t ? t.text : null,
+      transitMin: t ? t.min : null,
+      error: drive.error || null, // 차량(기준)까지 실패하면 오류 표시
     });
   });
 
-  // 요청 자체가 거부/한도초과로 실패하면 캐시하지 않는다 → 설정 고친 뒤 새로고침으로 바로 재시도.
-  const fatal = drive.error && transit.error;
-  if (!fatal) _cache.set(key, result);
+  // 차량 조회까지 실패하면 캐시하지 않음 → 설정 고친 뒤 새로고침으로 즉시 재시도.
+  if (!drive.error) _cache.set(key, result);
   return result;
 }
 
