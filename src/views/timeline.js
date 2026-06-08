@@ -11,7 +11,8 @@ import {
   pickedSpotId,
   sortDaySpotsByTime,
 } from "../model.js";
-import { estimateMoveMin, haversineKm, formatKm, formatMin } from "../geo.js";
+import { estimateMoveMin, haversineKm, formatKm, formatMin, centroid } from "../geo.js";
+import { getDayWeather } from "../weather.js";
 import { hasGoogleMaps } from "../mapsConfig.js";
 import {
   renderHotelSelector,
@@ -40,6 +41,18 @@ export function renderTimeline(container, ctx) {
       ]),
     ])
   );
+
+  // Day별 날씨 (좌표 있는 스팟 중심 + 그날 날짜 기준)
+  const wxCenter = centroid(day.spots);
+  if (wxCenter && day.date) {
+    const wxEl = el("div.day-weather", {}, [
+      el("span.wx-load", {}, ["날씨 불러오는 중…"]),
+    ]);
+    container.appendChild(wxEl);
+    getDayWeather(wxCenter.lat, wxCenter.lng, day.date)
+      .then((w) => fillWeather(wxEl, w))
+      .catch(() => wxEl.remove());
+  }
 
   // 기준 숙소 선택 바 (구글맵 키 있을 때만)
   const hotelMode = hasGoogleMaps();
@@ -130,6 +143,22 @@ export function renderTimeline(container, ctx) {
       );
     }
     row.appendChild(el("span.sf-modes", {}, chips));
+  }
+
+  // 날씨 칩 채우기.
+  function fillWeather(node, w) {
+    if (!w) {
+      node.remove();
+      return;
+    }
+    clear(node);
+    node.appendChild(el("span.wx-icon", {}, [w.rain ? "🌧️" : "☀️"]));
+    node.appendChild(el("span.wx-temp", {}, [`${w.tmax}° / ${w.tmin}°`]));
+    node.appendChild(
+      el("span.wx-rain", {}, [w.rain ? "비 소식 있어요" : "비 소식 없음"])
+    );
+    if (w.source === "normal")
+      node.appendChild(el("span.wx-src", {}, ["예년 기준"]));
   }
 
   // "🏨 숙소에서 …" 자리표시 줄 (비동기로 채워짐).

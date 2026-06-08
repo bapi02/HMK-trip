@@ -1,0 +1,20 @@
+{
+  "name": "Trip Planner · 여행 플래너",
+  "short_name": "여행 플래너",
+  "description": "여행 일정을 짜고 여러 기기에서 동기화하며 다음 여행에 재사용하는 여행 플래너",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f0e6",
+  "theme_color": "#c8472b",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

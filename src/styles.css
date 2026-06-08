@@ -306,6 +306,19 @@ button { font-family: var(--font-body); cursor: pointer; }
 .choice-item.picked .ci-body .spot-card { border-color: var(--accent); }
 .choice-item .ci-body .spot-from { margin-left: 6px; }
 
+/* ── Day별 날씨 칩 ──────────────────────────── */
+.day-weather {
+  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 13px; margin: 0 0 12px;
+  box-shadow: var(--shadow-sm); font-size: 13.5px;
+}
+.day-weather .wx-load { color: var(--ink-faint); }
+.day-weather .wx-icon { font-size: 15px; }
+.day-weather .wx-temp { font-family: var(--font-display); font-weight: 700; color: var(--ink); }
+.day-weather .wx-rain { color: var(--ink-soft); }
+.day-weather .wx-src { font-size: 11px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+
 .spot-list { list-style: none; margin: 0; padding: 0; }
 
 .spot-move {

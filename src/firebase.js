@@ -35,6 +35,13 @@ export async function initFirebase() {
     );
     const app = initializeApp(firebaseConfig);
     const db = firestore.getFirestore(app);
+    // 오프라인 캐시(PWA): 온라인일 때 본 일정을 기기에 저장해 데이터 없이도 열람 가능.
+    try {
+      await firestore.enableIndexedDbPersistence(db);
+    } catch (e) {
+      // 다중 탭이거나 미지원 브라우저면 무시(동기화는 그대로 동작).
+      console.warn("오프라인 캐시 비활성", e?.code || e);
+    }
     return { app, db, firestore };
   })();
 
