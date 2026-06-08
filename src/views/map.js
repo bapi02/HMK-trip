@@ -201,12 +201,9 @@ function renderGoogleMap(container, ctx) {
       });
       ac.bindTo("bounds", _gmap);
       let tempMarker = null;
-      ac.addListener("place_changed", () => {
-        const place = ac.getPlace();
-        if (!place.geometry || !place.geometry.location) {
-          toast("검색 결과를 선택해주세요");
-          return;
-        }
+      let lastQuery = "";
+
+      function showPlace(place) {
         const loc = place.geometry.location;
         _gmap.panTo(loc);
         _gmap.setZoom(16);
@@ -216,7 +213,57 @@ function renderGoogleMap(container, ctx) {
           map: _gmap,
           animation: google.maps.Animation.DROP,
         });
+        lastQuery = searchInput.value.trim();
         showSearchResult(place, { lat: loc.lat(), lng: loc.lng() });
+      }
+
+      // 자동완성을 안 골라도(엔터/직접 입력) 텍스트·주소로 첫 결과를 찾아 표시.
+      function runTextSearch(q) {
+        q = (q || "").trim();
+        if (!q || q === lastQuery) return;
+        lastQuery = q;
+        service.findPlaceFromQuery(
+          {
+            query: q,
+            fields: [
+              "place_id",
+              "name",
+              "geometry",
+              "rating",
+              "user_ratings_total",
+              "formatted_address",
+            ],
+          },
+          (results, status) => {
+            if (
+              status === google.maps.places.PlacesServiceStatus.OK &&
+              results &&
+              results[0] &&
+              results[0].geometry
+            ) {
+              showPlace(results[0]);
+            } else {
+              toast("검색 결과가 없어요");
+            }
+          }
+        );
+      }
+
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          showPlace(place);
+        } else {
+          // 자동완성에서 선택 안 하고 입력만 한 경우 → 텍스트 검색
+          runTextSearch((place && place.name) || searchInput.value);
+        }
+      });
+      // 엔터로도 검색 (자동완성 선택 없이)
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") setTimeout(() => runTextSearch(searchInput.value), 350);
+      });
+      searchInput.addEventListener("input", () => {
+        lastQuery = "";
       });
 
       // ── 검색 결과 카드 (평점·리뷰 링크 + 일정 추가)
