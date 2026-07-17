@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="108" fill="#c8472b"/>
   <text x="50%" y="52%" dy="0.04em" text-anchor="middle" dominant-baseline="middle"
-        font-family="'Nanum Myeongjo', serif" font-weight="800" font-size="300" fill="#f4f0e6">旅</text>
+        font-family="'Pretendard', system-ui, sans-serif" font-weight="800" font-size="300" fill="#f4f0e6">旅</text>
 </svg>

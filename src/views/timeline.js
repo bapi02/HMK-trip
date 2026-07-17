@@ -86,6 +86,16 @@ export function renderTimeline(container, ctx) {
     if (!confirmAction(`"${spot.title}" 스팟을 삭제할까요?`)) return;
     const idx = day.spots.findIndex((s) => s.id === spot.id);
     if (idx >= 0) day.spots.splice(idx, 1);
+    // 그룹(택1) 멤버였다면: 1곳만 남으면 묶음 해제, 선택자 삭제 시 남은 첫 후보를 선택.
+    if (spot.groupId) {
+      const rest = day.spots.filter((s) => s.groupId === spot.groupId);
+      if (rest.length === 1) {
+        rest[0].groupId = null;
+        rest[0].picked = false;
+      } else if (rest.length && !rest.some((s) => s.picked)) {
+        rest[0].picked = true;
+      }
+    }
     await ctx.persist();
     ctx.refresh();
   }

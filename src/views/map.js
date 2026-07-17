@@ -52,8 +52,10 @@ function renderGoogleMap(container, ctx) {
 
   // 검색 바 + 결과 카드 영역
   const searchInput = el("input.map-search-input", {
-    type: "text",
-    placeholder: "장소 검색 (예: 센소지, 시부야 스카이…)",
+    type: "search",
+    placeholder: "장소·주소 검색 (대충 쳐도 연관 결과가 떠요)",
+    enterkeyhint: "search",
+    autocomplete: "off",
   });
   const resultBox = el("div.map-search-result");
   container.appendChild(
@@ -217,36 +219,77 @@ function renderGoogleMap(container, ctx) {
         showSearchResult(place, { lat: loc.lat(), lng: loc.lng() });
       }
 
-      // 자동완성을 안 골라도(엔터/직접 입력) 텍스트·주소로 첫 결과를 찾아 표시.
+      // 자동완성을 안 골라도(엔터/직접 입력) 연관 결과 여러 개를 찾아 목록으로 보여준다.
+      // textSearch는 오타·부정확한 검색어도 관련 장소를 잘 찾아준다(구글 검색과 동일 엔진).
       function runTextSearch(q) {
         q = (q || "").trim();
         if (!q || q === lastQuery) return;
         lastQuery = q;
-        service.findPlaceFromQuery(
-          {
-            query: q,
-            fields: [
-              "place_id",
-              "name",
-              "geometry",
-              "rating",
-              "user_ratings_total",
-              "formatted_address",
-            ],
-          },
+        service.textSearch(
+          { query: q, bounds: _gmap.getBounds() || undefined },
           (results, status) => {
             if (
               status === google.maps.places.PlacesServiceStatus.OK &&
               results &&
-              results[0] &&
-              results[0].geometry
+              results.length
             ) {
-              showPlace(results[0]);
+              const hits = results.filter((r) => r.geometry && r.geometry.location);
+              if (hits.length === 1) showPlace(hits[0]);
+              else showResultList(hits.slice(0, 5));
             } else {
               toast("검색 결과가 없어요");
             }
           }
         );
+      }
+
+      // 연관 검색 결과 목록 (구글 연관성 순). 행을 누르면 지도 이동, 각 행에서 리뷰·추가 가능.
+      function showResultList(places) {
+        clear(resultBox);
+        const listEl = el("div.sr-list", {}, [
+          el("div.sr-list-head", {}, [`연관 결과 ${places.length}곳`]),
+        ]);
+        places.forEach((p) => {
+          const loc = p.geometry.location;
+          const coord = { lat: loc.lat(), lng: loc.lng() };
+          const stars = p.rating
+            ? `★ ${p.rating.toFixed(1)}` +
+              (p.user_ratings_total ? ` (${p.user_ratings_total.toLocaleString()})` : "")
+            : "";
+          listEl.appendChild(
+            el("div.sr-row", { onclick: () => showPlace(p) }, [
+              el("div.sr-main", {}, [
+                el("div.sr-name", {}, [p.name || "이름 없음"]),
+                el("div.sr-addr", {}, [
+                  [stars, p.formatted_address].filter(Boolean).join(" · "),
+                ]),
+              ]),
+              el("div.sr-actions", {}, [
+                el(
+                  "button.btn.sm.ghost",
+                  {
+                    onclick: (e) => {
+                      e.stopPropagation();
+                      openDetails(p.place_id, coord);
+                    },
+                  },
+                  ["📸"]
+                ),
+                el(
+                  "button.btn.sm.primary",
+                  {
+                    onclick: (e) => {
+                      e.stopPropagation();
+                      addSpotFromPlace(p, coord);
+                    },
+                  },
+                  ["➕"]
+                ),
+              ]),
+            ])
+          );
+        });
+        resultBox.appendChild(listEl);
       }
 
       ac.addListener("place_changed", () => {

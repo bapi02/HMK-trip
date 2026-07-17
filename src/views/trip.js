@@ -320,14 +320,30 @@ export async function renderTrip(root, store, tripId) {
 
   async function moveSpotToDay(spotId, targetDayIdx) {
     let moved = null;
+    let fromDay = null;
     for (const day of state.trip.schedule) {
       const idx = day.spots.findIndex((s) => s.id === spotId);
       if (idx >= 0) {
         moved = day.spots.splice(idx, 1)[0];
+        fromDay = day;
         break;
       }
     }
     if (!moved) return;
+    // 그룹(택1) 멤버를 다른 날로 옮기면 묶음에서 분리하고,
+    // 원래 그룹에 1곳만 남으면 그 묶음도 해제한다.
+    if (moved.groupId) {
+      const gid = moved.groupId;
+      moved.groupId = null;
+      moved.picked = false;
+      const rest = fromDay.spots.filter((s) => s.groupId === gid);
+      if (rest.length === 1) {
+        rest[0].groupId = null;
+        rest[0].picked = false;
+      } else if (rest.length && !rest.some((s) => s.picked)) {
+        rest[0].picked = true;
+      }
+    }
     state.trip.schedule[targetDayIdx].spots.push(moved);
     await persist();
     toast(`Day ${targetDayIdx + 1}로 옮겼어요`);
