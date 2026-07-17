@@ -83,6 +83,9 @@ function renderGoogleMap(container, ctx) {
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        // 구글맵 앱과 동일한 제스처: 한 손가락 이동, 핀치 줌,
+        // 더블탭 후 드래그 줌, 휠 스크롤 줌(Ctrl 불필요).
+        gestureHandling: "greedy",
       });
 
       const info = new google.maps.InfoWindow();
